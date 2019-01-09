@@ -181,8 +181,8 @@ def process_args(args):
 
             output.append(json)
         
-    final_output = {"sentences" : output}
-    ofp.write(unicode(final_output))
+        final_output = {"sentences" : output}
+        ofp.write(unicode(final_output))
 
 def main():
     args = parse_args(sys.argv[1:])
