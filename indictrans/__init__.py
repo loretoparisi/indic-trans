@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import io
 import sys
 import codecs
+import json as js
 import argparse
 
 from ._utils import UrduNormalizer, WX
@@ -182,7 +183,11 @@ def process_args(args):
             output.append(json)
         
         final_output = {"sentences" : output}
-        ofp.write(unicode(final_output))
+        
+        r = js.dumps(final_output)
+        
+
+        ofp.write(r)
 
 def main():
     args = parse_args(sys.argv[1:])
