@@ -6,6 +6,7 @@ import sys
 import codecs
 import json as js
 import argparse
+from libindic_.soundex import Soundex
 
 from ._utils import UrduNormalizer, WX
 from .transliterator import Transliterator
@@ -61,7 +62,7 @@ def parse_args(args):
         action='store_true',
         help='use ML system for transliteration')
 
-    group.add_argument(
+    parser.add_argument(
         '-f',
         '--format',
         choices=modes,
@@ -74,6 +75,7 @@ def parse_args(args):
         '--rb',
         action='store_true',
         help='use rule-based system for transliteration')
+
     parser.add_argument(
         '-i',
         '--input',
@@ -88,6 +90,7 @@ def parse_args(args):
         type=str,
         metavar='',
         help="<output-file>")
+    
     args = parser.parse_args(args)
     if args.source == args.target:
         sys.stderr.write(
@@ -134,19 +137,22 @@ def process_args(args):
         s=args.source
         t=args.target
         
-        forward_transl_full = Transliterator(source=s, target=t, build_lookup=True)
+        forward_transl_full = Transliterator(source=s, target=t, rb=args.rb, build_lookup=True)
 
-        forward_transl_token = Transliterator(source=s, target=t, decode='beamsearch')
-        back_transl_token = Transliterator(source=t, target=s, build_lookup=True)
+        forward_transl_token = Transliterator(source=s, target=t, rb=args.rb, decode='beamsearch')
+        back_transl_token = Transliterator(source=t, target=s, rb=args.rb, build_lookup=True)
 
         tk = Tokenizer(lang=s[:2])
         tk_back = Tokenizer(lang=t[:2])
 
-        output=[]
-        for l in ifp:
-            json = {}
+        instance = Soundex()
 
-            definitive = forward_transl_full.transform(l)
+        output=[]
+
+        for l in ifp:
+
+            json = {}
+            definitive = forward_transl_full.transform(l.strip())
             
             json["text"] = definitive
             json["tokens"] = []
@@ -155,7 +161,7 @@ def process_args(args):
             text_precedent = ""
 
             tokens=tk.tokenize(l)
-            
+
             back_tokens = tk_back.tokenize(definitive)
 
             for i,t in enumerate(tokens):
@@ -163,16 +169,52 @@ def process_args(args):
                 inner_json = {}
                 choosen = back_tokens[i]
                 suggestions = []
+                exclusions = []
+
                 forward_out = forward_transl_token.transform(t)
 
                 for c in forward_out:
+                    
                     back_out = back_transl_token.transform(c)
 
                     if back_out == t and c != choosen:
                         suggestions.append(c)
+                    else:
+                        if c != choosen:
+                            exclusions.append(c)
+
+                all_possible_choices = list(suggestions)
+                all_possible_choices.insert(0,choosen)
+
+                transformed = []
+                for c in all_possible_choices:
+                    t = instance.soundex(c)
+                    transformed.append(t)
+
+                duplicates = {}
+
+                for i,t in enumerate(transformed):
+                    if t not in duplicates:
+                        original_text = all_possible_choices[i]
+                        duplicates[t] = [] 
+                        duplicates[t].append(original_text)
+                    else:
+                        original_text = all_possible_choices[i]
+                        duplicates[t].append(original_text)
+
+                new_duplicates = {}
+                suggestion_duplicates = []
+                for k,v in duplicates.items():
+                    new_duplicates[v[0]] = v[1:]
+                    suggestion_duplicates.extend(v[1:])
+                    
                 
+
                 inner_json["token"] = choosen
-                inner_json["suggestions"] = suggestions
+                inner_json["duplicates"] = new_duplicates
+                #inner_json["all_possible_choices"] = all_possible_choices
+                inner_json["exclusions"] = exclusions
+                inner_json["suggestions"] = [s for s in suggestions if s not in suggestion_duplicates]
                 inner_json["offset"] = len(text_precedent)+1
                 inner_json["length"] = len(t)
                 
@@ -186,7 +228,6 @@ def process_args(args):
         
         r = js.dumps(final_output)
         
-
         ofp.write(r)
 
 def main():
