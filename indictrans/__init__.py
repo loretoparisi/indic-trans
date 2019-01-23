@@ -149,6 +149,8 @@ def process_args(args):
 
         output=[]
 
+        text_precedent = ""
+
         for l in ifp:
 
             json = {}
@@ -158,8 +160,7 @@ def process_args(args):
             json["tokens"] = []
             
             tokens = []
-            text_precedent = ""
-
+            
             tokens=tk.tokenize(l)
 
             back_tokens = tk_back.tokenize(definitive)
@@ -216,11 +217,12 @@ def process_args(args):
                 inner_json["exclusions"] = exclusions
                 inner_json["suggestions"] = [s for s in suggestions if s not in suggestion_duplicates]
                 inner_json["offset"] = len(text_precedent)+1
-                inner_json["length"] = len(t)
+                
+                inner_json["length"] = len(choosen)
                 
                 json["tokens"].append(inner_json)
-                
-                text_precedent+=t + " "
+               
+                text_precedent+=choosen + " "
 
             output.append(json)
         
