@@ -1,6 +1,7 @@
 pbr
 six
 future
+repoze.lru
 cython>=0.24.0a0
 numpy>=1.10.4
 scipy>=0.13.3
