@@ -11,8 +11,6 @@ import datetime
 from ._utils import UrduNormalizer, WX
 from .transliterator import Transliterator
 from polyglot_tokenizer import Tokenizer
-import regex
-import re
 
 import sys  
 reload(sys)  
