@@ -174,7 +174,7 @@ def process_args(args):
             #transform entire sentence as first choice
             definitive = forward_transl_full.transform(l.strip())
             
-            json["text"] = definitive
+            json["text"] = definitive.replace(u"\u0000","")
             json["tokens"] = []
             
             tokens = []
@@ -202,7 +202,7 @@ def process_args(args):
                         suggestions.append(c)
                     else:
                         if c != choosen:
-                            exclusions.append(c)
+                            exclusions.append(c.replace(u"\u0000",""))
 
                 all_possible_choices = list(suggestions)
                 all_possible_choices.insert(0,choosen)
@@ -218,10 +218,10 @@ def process_args(args):
                     if t not in duplicates:
                         original_text = all_possible_choices[i]
                         duplicates[t] = [] 
-                        duplicates[t].append(original_text)
+                        duplicates[t].append(original_text.replace(u"\u0000",""))
                     else:
                         original_text = all_possible_choices[i]
-                        duplicates[t].append(original_text)
+                        duplicates[t].append(original_text.replace(u"\u0000",""))
 
                 new_duplicates = {}
                 suggestion_duplicates = []
@@ -231,7 +231,7 @@ def process_args(args):
                     suggestion_duplicates.extend(v[1:])
                 
 
-                inner_json["token"] = choosen
+                inner_json["token"] = choosen.replace(u"\u0000","")
                 inner_json["duplicates"] = new_duplicates
                 inner_json["exclusions"] = exclusions
                 inner_json["suggestions"] = [s for s in suggestions if s not in suggestion_duplicates]
