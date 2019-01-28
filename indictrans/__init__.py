@@ -191,8 +191,6 @@ def process_args(args):
             back_tokens = tk_back.tokenize(definitive)
 
             for i,(t,choosen) in enumerate(zip(tokens,back_tokens)):
-                print(i)
-                print(t)
                 
                 inner_json = {}
                 
