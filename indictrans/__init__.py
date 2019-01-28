@@ -138,7 +138,7 @@ def process_args(args):
      
     # LIMIT CASES # BUGS INDIC-TRANS
     # HARD_CODED
-    if args.target == "urd":
+    if args.target == "urd" or args.source == 'urd':
         args.build_lookup = False
 
     if args.output_format=='stdout':
@@ -163,10 +163,10 @@ def process_args(args):
         t=args.target
 
 
-        forward_transl_full = Transliterator(source=s, target=t, rb=args.rb, build_lookup=True)
+        forward_transl_full = Transliterator(source=s, target=t, rb=args.rb, build_lookup=args.build_lookup)
 
         forward_transl_token = Transliterator(source=s, target=t, rb=args.rb, decode='beamsearch')
-        back_transl_token = Transliterator(source=t, target=s, rb=args.rb, build_lookup=True)
+        back_transl_token = Transliterator(source=t, target=s, rb=args.rb, build_lookup=args.build_lookup)
 
 
         tk = Tokenizer(lang=ISO_3to2[s])
