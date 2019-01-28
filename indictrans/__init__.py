@@ -18,6 +18,7 @@ from ._utils import UrduNormalizer, WX
 from .transliterator import Transliterator
 from polyglot_tokenizer import Tokenizer
 from unicode_marks import UNICODE_NSM_ALL
+from iso_code_transformer import ISO_3_to2
 
 import sys  
 reload(sys)  
@@ -162,8 +163,9 @@ def process_args(args):
         forward_transl_token = Transliterator(source=s, target=t, rb=args.rb, decode='beamsearch')
         back_transl_token = Transliterator(source=t, target=s, rb=args.rb, build_lookup=True)
 
-        tk = Tokenizer(lang=s[:2])
-        tk_back = Tokenizer(lang=t[:2])
+
+        tk = Tokenizer(lang=ISO_3_to2[s])
+        tk_back = Tokenizer(lang=ISO_3_to2[t])
 
         instance = Soundex()
 
@@ -186,11 +188,12 @@ def process_args(args):
             
             # tokenize initial sentence in tokens
             tokens=tk.tokenize(l)
+            
 
             #backtokenize text transformed
             back_tokens = tk_back.tokenize(definitive)
 
-            for i,(t,choosen) in enumerate(zip(tokens,back_tokens)):
+            for index,(t,choosen) in enumerate(zip(tokens,back_tokens)):
                 
                 inner_json = {}
                 
@@ -240,10 +243,20 @@ def process_args(args):
                 inner_json["duplicates"] = new_duplicates
                 inner_json["exclusions"] = exclusions
                 inner_json["suggestions"] = [s for s in suggestions if s not in suggestion_duplicates]
-                inner_json["offset"] = text_precedent_len + 1
                 inner_json["length"] =len([1 for c in choosen if not c in UNICODE_NSM_ALL])
+                inner_json["offset"] = text_precedent_len
+
+                if index != len(tokens)-1:
+                    text_precedent_len+=1
+                
+
+                inner_json['is_last_token'] = bool(index == len(back_tokens)-1)
+
+
+                text_precedent_len += inner_json["length"]
                 json["tokens"].append(inner_json)
-                text_precedent_len += inner_json["length"]+1
+                #text_precedent_len += inner_json["length"]+1
+                #text_precedent_len += inner_json["length"]+1
 
             output.append(json)
         
