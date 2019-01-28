@@ -18,7 +18,7 @@ from ._utils import UrduNormalizer, WX
 from .transliterator import Transliterator
 from polyglot_tokenizer import Tokenizer
 from unicode_marks import UNICODE_NSM_ALL
-from iso_code_transformer import ISO_3_to2
+from iso_code_transformer import ISO_3to2
 
 import sys  
 reload(sys)  
@@ -135,6 +135,11 @@ def process_args(args):
             ofp = codecs.getwriter('utf8')(sys.stdout.buffer)
         else:
             ofp = codecs.getwriter('utf8')(sys.stdout)
+     
+    # LIMIT CASES # BUGS INDIC-TRANS
+    # HARD_CODED
+    if args.target == "urd":
+        args.build_lookup = False
 
     if args.output_format=='stdout':
        
@@ -164,8 +169,8 @@ def process_args(args):
         back_transl_token = Transliterator(source=t, target=s, rb=args.rb, build_lookup=True)
 
 
-        tk = Tokenizer(lang=ISO_3_to2[s])
-        tk_back = Tokenizer(lang=ISO_3_to2[t])
+        tk = Tokenizer(lang=ISO_3to2[s])
+        tk_back = Tokenizer(lang=ISO_3to2[t])
 
         instance = Soundex()
 
@@ -248,10 +253,6 @@ def process_args(args):
 
                 if index != len(tokens)-1:
                     text_precedent_len+=1
-                
-
-                inner_json['is_last_token'] = bool(index == len(back_tokens)-1)
-
 
                 text_precedent_len += inner_json["length"]
                 json["tokens"].append(inner_json)
