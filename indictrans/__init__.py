@@ -28,6 +28,11 @@ __all__ = ['Transliterator', 'UrduNormalizer', 'WX']
 __author__ = "Irshad Ahmad Bhat"
 __version__ = "1.0"
 
+def clean_str(t):
+    t=t.replace(u"\u0000","").strip()
+    return t
+    
+
 
 def parse_args(args):
     languages = '''hin guj pan ben mal kan tam tel ori
@@ -104,9 +109,8 @@ def parse_args(args):
     
     args = parser.parse_args(args)
     if args.source == args.target:
-        sys.stderr.write(
-            'indictrans: error: source must be different from target\n')
-        sys.stderr.write(parser.parse_args(['-h']))
+        sys.stderr.write('error: source must be different from target\n')
+        #sys.stderr.write(parser.parse_args(['-h']))
     return args
 
 
@@ -173,8 +177,9 @@ def process_args(args):
 
             #transform entire sentence as first choice
             definitive = forward_transl_full.transform(l.strip())
-            
-            json["text"] = definitive.replace(u"\u0000","")
+
+
+            json["text"] = clean_str(definitive)
             json["tokens"] = []
             
             tokens = []
@@ -186,6 +191,8 @@ def process_args(args):
             back_tokens = tk_back.tokenize(definitive)
 
             for i,(t,choosen) in enumerate(zip(tokens,back_tokens)):
+                print(i)
+                print(t)
                 
                 inner_json = {}
                 
@@ -218,10 +225,10 @@ def process_args(args):
                     if t not in duplicates:
                         original_text = all_possible_choices[i]
                         duplicates[t] = [] 
-                        duplicates[t].append(original_text.replace(u"\u0000",""))
+                        duplicates[t].append(clean_str(original_text))
                     else:
                         original_text = all_possible_choices[i]
-                        duplicates[t].append(original_text.replace(u"\u0000",""))
+                        duplicates[t].append(clean_str(original_text))
 
                 new_duplicates = {}
                 suggestion_duplicates = []
@@ -231,7 +238,7 @@ def process_args(args):
                     suggestion_duplicates.extend(v[1:])
                 
 
-                inner_json["token"] = choosen.replace(u"\u0000","")
+                inner_json["token"] = clean_str(choosen)
                 inner_json["duplicates"] = new_duplicates
                 inner_json["exclusions"] = exclusions
                 inner_json["suggestions"] = [s for s in suggestions if s not in suggestion_duplicates]
