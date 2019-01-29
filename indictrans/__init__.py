@@ -4,6 +4,7 @@
 from __future__ import unicode_literals
 import io
 import os,sys
+import string
 
 parentPath = os.path.abspath("indictrans")
 if parentPath not in sys.path:
@@ -19,6 +20,7 @@ from .transliterator import Transliterator
 from polyglot_tokenizer import Tokenizer
 from unicode_marks import UNICODE_NSM_ALL
 from iso_code_transformer import ISO_3to2
+import re
 
 import sys  
 reload(sys)  
@@ -174,29 +176,39 @@ def process_args(args):
 
         instance = Soundex()
 
+        seen = {} 
         output=[]
 
         text_precedent_len = 0
 
-        for l in ifp:
+        document_input=ifp.read()
 
+        
+        document_translitted=""
+
+        lines = document_input.splitlines()
+
+        for l in lines:
+    
             json = {}
-
-            #transform entire sentence as first choice
-            definitive = forward_transl_full.transform(l.strip())
-
-
-            json["text"] = clean_str(definitive)
-            json["tokens"] = []
             
+            #transform entire sentence as first choice
+            definitive = forward_transl_full.transform(l)
+            document_translitted+=definitive+"\n"
+
             tokens = []
             
             # tokenize initial sentence in tokens
             tokens=tk.tokenize(l)
             
-
+            
             #backtokenize text transformed
-            back_tokens = tk_back.tokenize(definitive)
+            back_tokens = tk_back.tokenize(clean_str(definitive))
+            
+            json["text"] = definitive
+            json["tokens"] = []
+
+            count_tokens = 0
 
             for index,(t,choosen) in enumerate(zip(tokens,back_tokens)):
                 
@@ -243,21 +255,37 @@ def process_args(args):
                     new_duplicates[v[0]] = v[1:]
                     suggestion_duplicates.extend(v[1:])
                 
+                my_regex = r"\b" + re.escape(choosen) + r"\b"
+                
+                r = re.compile(my_regex, flags=re.I | re.X)
+                
+                length=len([1 for c in choosen if not c in UNICODE_NSM_ALL])
 
-                inner_json["token"] = clean_str(choosen)
-                inner_json["duplicates"] = new_duplicates
-                inner_json["exclusions"] = exclusions
-                inner_json["suggestions"] = [s for s in suggestions if s not in suggestion_duplicates]
-                inner_json["length"] =len([1 for c in choosen if not c in UNICODE_NSM_ALL])
-                inner_json["offset"] = text_precedent_len
+                for m in r.finditer(document_translitted):
+                    
+                    token_=m.group()
+                   
+                    characterOffsetBegin=m.start()
+                    characterOffsetEnd=characterOffsetBegin+length - 1 
 
-                if index != len(tokens)-1:
-                    text_precedent_len+=1
+                    found=-1
 
-                text_precedent_len += inner_json["length"]
-                json["tokens"].append(inner_json)
-                #text_precedent_len += inner_json["length"]+1
-                #text_precedent_len += inner_json["length"]+1
+                    if token_ in seen:
+                        found=seen[token_]
+                   
+                    if characterOffsetBegin > found:
+                        count_tokens+=1
+                        seen[token_] = characterOffsetEnd
+                        inner_json["token"] = choosen
+                        inner_json["index"] = count_tokens
+                        inner_json["duplicates"] = new_duplicates
+                        inner_json["exclusions"] = exclusions
+                        inner_json["suggestions"] = [s for s in suggestions if s not in suggestion_duplicates]
+                        inner_json['characterOffsetBegin'] = characterOffsetBegin
+                        inner_json['characterOffsetEnd'] = characterOffsetEnd
+                        json["tokens"].append(inner_json)
+                        break
+                    
 
             output.append(json)
         
