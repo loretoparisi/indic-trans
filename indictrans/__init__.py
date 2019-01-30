@@ -148,11 +148,11 @@ def process_args(args):
     if args.source == 'eng' and args.target in ISO_3to2 and args.target != 'eng':
         # UTF8 unicode parser regex
         def my_regex(word):
-            return u'(\s|^)%s(\s|$)' % word
+            return r"(?<!\S){}(?!\S)".format(re.escape(word))
     else:
         # ASCII romanized parser regex
         def my_regex(word):
-            return r"\b" + re.escape(word) + r"\b"
+            return r"\b{}\b".format(re.escape(word))
 
     if args.output_format=='stdout':
        
