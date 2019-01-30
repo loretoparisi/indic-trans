@@ -244,6 +244,7 @@ def process_args(args):
             # zip token and translitterated token
             for index,(t,choosen) in enumerate(zip(tokens,back_tokens)):
                 
+                
                 inner_json = {}
                 
                 # suggestions for choosen tokens
@@ -276,19 +277,19 @@ def process_args(args):
                 transformed = []
 
                 for c in all_possible_choices:
-                    t = instance.soundex(c)
-                    transformed.append(t)
+                    p = instance.soundex(c)
+                    transformed.append(p)
 
                 duplicates = {}
 
-                for t,original_text in zip(transformed,all_possible_choices):
+                for p,original_text in zip(transformed,all_possible_choices):
 
-                    if t not in duplicates:
-                        duplicates[t] = [] 
-                        duplicates[t].append(clean_str(original_text))
+                    if p not in duplicates:
+                        duplicates[p] = [] 
+                        duplicates[p].append(clean_str(original_text))
 
                     else:
-                        duplicates[t].append(clean_str(original_text))
+                        duplicates[p].append(clean_str(original_text))
 
                 new_duplicates = {}
                 suggestion_duplicates = []
@@ -299,7 +300,7 @@ def process_args(args):
                     suggestion_duplicates.extend(v[1:])
                 
                 #my_regex = u'(\s|^)%s(\s|$)'  % choosen
-                # my_regex = r"\b" + re.escape(choosen) + r"\b"
+                #my_regex = r"\b" + re.escape(choosen) + r"\b"
                 
                 r = re.compile(my_regex(choosen), flags=re.I | re.X | re.UNICODE)
                 
@@ -322,11 +323,7 @@ def process_args(args):
                     if characterOffsetBegin > found:
                         count_tokens+=1
                         seen[word] = characterOffsetEnd
-
-
-                        #inner_json["index_token"] = index
-                        #inner_json["leng"] = length
-
+                        inner_json["source"] = t
                         inner_json["token"] = choosen
                         inner_json["index"] = count_tokens
                         inner_json["duplicates"] = new_duplicates
