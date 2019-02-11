@@ -367,7 +367,6 @@ def process_args(args):
                 
             output.append(json)
 
-            #print(json['text'])
 
         final_output = {"sentences" : output}
         
