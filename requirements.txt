@@ -3,5 +3,5 @@ six
 future
 repoze.lru
 cython>=0.24.0a0
-numpy>=1.10.4
+numpy>=1.10.4,<1.16.0
 scipy>=0.13.3

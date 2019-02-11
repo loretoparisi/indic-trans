@@ -34,6 +34,14 @@ __version__ = "1.0"
 def clean_str(t):
     t=t.replace(u"\u0000","").strip()
     return t
+
+
+
+def resolveKannada(chos, excluss):
+    if len(chos) >= 2 and chos + 'a' in excluss:
+        return chos + 'a'
+    else:
+        return chos
     
 
 
@@ -117,6 +125,7 @@ def parse_args(args):
     return args
 
 
+
 def process_args(args):
     
 
@@ -143,6 +152,16 @@ def process_args(args):
     if args.target == "urd" or args.source == 'urd':
         args.build_lookup = False
 
+    # SELECT REGEX TO SEARCH WORDS OFFSETS INSIDE A DOCUMENT (INDIAN -> UTF, ENG -> ASCII)
+    if args.source == 'eng' and args.target in ISO_3to2 and args.target != 'eng':
+        # UTF8 unicode parser regex
+        def my_regex(word):
+            return r"(?<!\S){}(?!\S)".format(re.escape(word))
+    else:
+        # ASCII romanized parser regex
+        def my_regex(word):
+            return r"\b{}\b".format(re.escape(word))
+
     if args.output_format=='stdout':
        
         # initialize transliterator object
@@ -160,122 +179,181 @@ def process_args(args):
 
 
     if args.output_format=='json':
-    
-        s=args.source 
-        t=args.target
+        
+        # getting source language from terminal
+        source=args.source 
 
+        # getting target language from terminal
+        target=args.target
 
-        forward_transl_full = Transliterator(source=s, target=t, rb=args.rb, build_lookup=args.build_lookup)
+        # Full forward ( source lang -> target lang) transliterator at SENTENCE LEVEL
+        forward_transl_full = Transliterator(source=source, target=target, rb=args.rb, build_lookup=args.build_lookup)
 
-        forward_transl_token = Transliterator(source=s, target=t, rb=args.rb, decode='beamsearch')
-        back_transl_token = Transliterator(source=t, target=s, rb=args.rb, build_lookup=args.build_lookup)
+        # forward ( source lang -> target lang) transliterator at TOKEN LEVEL, we use this to trasliterate every token indipendently 
+        # from source to target lang with multiple choices (beamsearch)
+        forward_transl_token = Transliterator(source=source, target=target, rb=args.rb, decode='beamsearch')
 
+        # backward ( target lang -> source lang) transliterator at TOKEN LEVEL, we use this to check backtranslitteration of result
+        back_transl_token = Transliterator(source=target, target=source, rb=args.rb, build_lookup=args.build_lookup)
 
-        tk = Tokenizer(lang=ISO_3to2[s])
-        tk_back = Tokenizer(lang=ISO_3to2[t])
+        # Tokenizer of source language
+        tk = Tokenizer(lang=ISO_3to2[source])
 
+        # Tokenizer of target language
+        tk_back = Tokenizer(lang=ISO_3to2[target])
+
+        # Soundex instance object for checking phonetically similarity between words
         instance = Soundex()
 
-        seen = {} 
+        # array of output sentences
         output=[]
 
-        text_precedent_len = 0
+        # seen vector to recognize words that already have been processed
+        seen = {} 
 
+        # read entire source text to transliterate
         document_input=ifp.read()
 
-        
-        document_translitted=""
-
+        # document_input divided by lines
         lines = document_input.splitlines()
 
+        # progressive translitted text
+        document_translitted=u""
+
+        # for every line
         for l in lines:
-    
+            
+            # prepare a json for every line
             json = {}
             
             #transform entire sentence as first choice
             definitive = forward_transl_full.transform(l)
-            document_translitted+=definitive+"\n"
 
-            tokens = []
-            
+            # add traslitted line to entire translitted text
+            document_translitted+=definitive+u"\n"
+
             # tokenize initial sentence in tokens
             tokens=tk.tokenize(l)
             
-            
             #backtokenize text transformed
             back_tokens = tk_back.tokenize(clean_str(definitive))
+
             
+            # text field is sentence first choice without alternatives (stdout mode)
             json["text"] = definitive
+            #json["tokenization"] = back_tokens
+
+
             json["tokens"] = []
 
+            # count index token inside a sentence, without punctuation
             count_tokens = 0
 
+            # zip token and translitterated token
             for index,(t,choosen) in enumerate(zip(tokens,back_tokens)):
+                
                 
                 inner_json = {}
                 
+                # suggestions for choosen tokens
                 suggestions = []
+
                 exclusions = []
 
+                # translitterate token from source sentence with beamsearch ( 5 results)
                 forward_out = forward_transl_token.transform(t)
 
+
+                # open alternatives
                 for c in forward_out:
                     
+                    # for every alternatives, back-translitterate it
                     back_out = back_transl_token.transform(c)
 
+                    # if back-translitterated token is equal to initial token, but the result of translitteration of two token is different, one is suggestion .
                     if back_out == t and c != choosen:
-                        suggestions.append(c)
+                        suggestions.append(clean_str(c))
                     else:
                         if c != choosen:
-                            exclusions.append(c.replace(u"\u0000",""))
+                            exclusions.append(clean_str(c))
 
+                # add choosen to all possible choices [ suggestion + choice]
                 all_possible_choices = list(suggestions)
                 all_possible_choices.insert(0,choosen)
 
+                # transform all suggestion (+ choosen) to phonetical alphabet with soundex
                 transformed = []
+
                 for c in all_possible_choices:
-                    t = instance.soundex(c)
-                    transformed.append(t)
+                    p = instance.soundex(c)
+                    transformed.append(p)
 
                 duplicates = {}
 
-                for i,t in enumerate(transformed):
-                    if t not in duplicates:
-                        original_text = all_possible_choices[i]
-                        duplicates[t] = [] 
-                        duplicates[t].append(clean_str(original_text))
+                for p,original_text in zip(transformed,all_possible_choices):
+
+                    if p not in duplicates:
+                        duplicates[p] = [] 
+                        duplicates[p].append(clean_str(original_text))
+
                     else:
-                        original_text = all_possible_choices[i]
-                        duplicates[t].append(clean_str(original_text))
+                        duplicates[p].append(clean_str(original_text))
 
                 new_duplicates = {}
                 suggestion_duplicates = []
 
-                for k,v in duplicates.items():
+                # for every 
+                for _ ,v in duplicates.items():
                     new_duplicates[v[0]] = v[1:]
                     suggestion_duplicates.extend(v[1:])
                 
-                my_regex = r"\b" + re.escape(choosen) + r"\b"
+                #my_regex = u'(\s|^)%s(\s|$)'  % choosen
+                #my_regex = r"\b" + re.escape(choosen) + r"\b"
                 
-                r = re.compile(my_regex, flags=re.I | re.X)
                 
-                length=len([1 for c in choosen if not c in UNICODE_NSM_ALL])
+                
+                if source=='kan' and target=='eng':
 
+                    new_choosen = resolveKannada(choosen,exclusions)
+    
+
+                    if new_choosen != choosen:
+                    
+                        exclusions.remove(new_choosen)
+                        exclusions.append(choosen)
+
+                        if new_duplicates[choosen]:
+                            new_duplicates[new_choosen] = new_duplicates.pop(choosen)
+
+                        if new_choosen not in json["text"]:
+                            json["text"]=json["text"].replace(choosen,new_choosen)
+
+                        choosen=new_choosen
+
+
+                r = re.compile(my_regex(choosen), flags=re.I | re.X | re.UNICODE)
+
+                # calculate length of this choosen token
+                length=len([1 for c in choosen if not c in UNICODE_NSM_ALL])
+            
                 for m in r.finditer(document_translitted):
                     
-                    token_=m.group()
-                   
+                    # take every occurrence found inside full text 
+                    word=m.group()
+                    
                     characterOffsetBegin=m.start()
                     characterOffsetEnd=characterOffsetBegin+length - 1 
 
                     found=-1
 
-                    if token_ in seen:
-                        found=seen[token_]
+                    if word in seen:
+                        found=seen[word]
                    
                     if characterOffsetBegin > found:
                         count_tokens+=1
-                        seen[token_] = characterOffsetEnd
+                        seen[word] = characterOffsetEnd
+
+                        inner_json["source"] = t
                         inner_json["token"] = choosen
                         inner_json["index"] = count_tokens
                         inner_json["duplicates"] = new_duplicates
@@ -284,11 +362,13 @@ def process_args(args):
                         inner_json['characterOffsetBegin'] = characterOffsetBegin
                         inner_json['characterOffsetEnd'] = characterOffsetEnd
                         json["tokens"].append(inner_json)
-                        break
-                    
 
+                        break
+                
             output.append(json)
-        
+
+            #print(json['text'])
+
         final_output = {"sentences" : output}
         
         r = js.dumps(final_output)
