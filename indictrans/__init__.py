@@ -222,6 +222,7 @@ def process_args(args):
 
         # for every line
         for l in lines:
+
             
             # prepare a json for every line
             json = {}
@@ -312,6 +313,7 @@ def process_args(args):
                 
                 
                 
+
                 if source=='kan' and target=='eng':
 
                     new_choosen = resolveKannada(choosen,exclusions)
@@ -322,21 +324,25 @@ def process_args(args):
                         exclusions.remove(new_choosen)
                         exclusions.append(choosen)
 
-                        if new_duplicates[choosen]:
+                        if choosen in new_duplicates:
                             new_duplicates[new_choosen] = new_duplicates.pop(choosen)
+                        
+                        
 
                         if new_choosen not in json["text"]:
                             json["text"]=json["text"].replace(choosen,new_choosen)
 
+                            new_last_line = document_translitted.strip().split(u"\n")[-1].replace(choosen,new_choosen)
+                            document_translitted = u'\n'.join(document_translitted.split(u"\n")[0:-2]) + "\n" + new_last_line + "\n"
+                        
                         choosen=new_choosen
-
+                
 
                 r = re.compile(my_regex(choosen), flags=re.I | re.X | re.UNICODE)
-
                 # calculate length of this choosen token
                 length=len([1 for c in choosen if not c in UNICODE_NSM_ALL])
             
-                for m in r.finditer(document_translitted):
+                for m in r.finditer(document_translitted.strip()):
                     
                     # take every occurrence found inside full text 
                     word=m.group()
@@ -366,12 +372,13 @@ def process_args(args):
                         break
                 
             output.append(json)
-
+            
 
         final_output = {"sentences" : output}
         
         r = js.dumps(final_output)
         ofp.write(r)
+
 
 def main():
     args = parse_args(sys.argv[1:])
