@@ -34,6 +34,14 @@ __version__ = "1.0"
 def clean_str(t):
     t=t.replace(u"\u0000","").strip()
     return t
+
+
+
+def resolveKannada(chos, excluss):
+    if len(chos) >= 2 and chos + 'a' in excluss:
+        return chos + 'a'
+    else:
+        return chos
     
 
 
@@ -173,26 +181,26 @@ def process_args(args):
     if args.output_format=='json':
         
         # getting source language from terminal
-        s=args.source 
+        source=args.source 
 
         # getting target language from terminal
-        t=args.target
+        target=args.target
 
         # Full forward ( source lang -> target lang) transliterator at SENTENCE LEVEL
-        forward_transl_full = Transliterator(source=s, target=t, rb=args.rb, build_lookup=args.build_lookup)
+        forward_transl_full = Transliterator(source=source, target=target, rb=args.rb, build_lookup=args.build_lookup)
 
         # forward ( source lang -> target lang) transliterator at TOKEN LEVEL, we use this to trasliterate every token indipendently 
         # from source to target lang with multiple choices (beamsearch)
-        forward_transl_token = Transliterator(source=s, target=t, rb=args.rb, decode='beamsearch')
+        forward_transl_token = Transliterator(source=source, target=target, rb=args.rb, decode='beamsearch')
 
         # backward ( target lang -> source lang) transliterator at TOKEN LEVEL, we use this to check backtranslitteration of result
-        back_transl_token = Transliterator(source=t, target=s, rb=args.rb, build_lookup=args.build_lookup)
+        back_transl_token = Transliterator(source=target, target=source, rb=args.rb, build_lookup=args.build_lookup)
 
         # Tokenizer of source language
-        tk = Tokenizer(lang=ISO_3to2[s])
+        tk = Tokenizer(lang=ISO_3to2[source])
 
         # Tokenizer of target language
-        tk_back = Tokenizer(lang=ISO_3to2[t])
+        tk_back = Tokenizer(lang=ISO_3to2[target])
 
         # Soundex instance object for checking phonetically similarity between words
         instance = Soundex()
@@ -302,8 +310,29 @@ def process_args(args):
                 #my_regex = u'(\s|^)%s(\s|$)'  % choosen
                 #my_regex = r"\b" + re.escape(choosen) + r"\b"
                 
-                r = re.compile(my_regex(choosen), flags=re.I | re.X | re.UNICODE)
                 
+                
+                if source=='kan' and target=='eng':
+
+                    new_choosen = resolveKannada(choosen,exclusions)
+    
+
+                    if new_choosen != choosen:
+                    
+                        exclusions.remove(new_choosen)
+                        exclusions.append(choosen)
+
+                        if new_duplicates[choosen]:
+                            new_duplicates[new_choosen] = new_duplicates.pop(choosen)
+
+                        if new_choosen not in json["text"]:
+                            json["text"]=json["text"].replace(choosen,new_choosen)
+
+                        choosen=new_choosen
+
+
+                r = re.compile(my_regex(choosen), flags=re.I | re.X | re.UNICODE)
+
                 # calculate length of this choosen token
                 length=len([1 for c in choosen if not c in UNICODE_NSM_ALL])
             
@@ -323,6 +352,7 @@ def process_args(args):
                     if characterOffsetBegin > found:
                         count_tokens+=1
                         seen[word] = characterOffsetEnd
+
                         inner_json["source"] = t
                         inner_json["token"] = choosen
                         inner_json["index"] = count_tokens
@@ -332,10 +362,13 @@ def process_args(args):
                         inner_json['characterOffsetBegin'] = characterOffsetBegin
                         inner_json['characterOffsetEnd'] = characterOffsetEnd
                         json["tokens"].append(inner_json)
+
                         break
                 
             output.append(json)
-        
+
+            #print(json['text'])
+
         final_output = {"sentences" : output}
         
         r = js.dumps(final_output)
