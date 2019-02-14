@@ -42,7 +42,15 @@ def resolveKannada(chos, excluss):
         return chos + 'a'
     else:
         return chos
+
+def resolveHindi(chos1, excluss1):
     
+    if len(chos1) >= 2 and chos1.replace('c','k') in excluss1 and chos1 != chos1.replace('c','k'):
+        return chos1.replace('c','k')
+    else:
+        return chos1
+   
+
 
 
 def parse_args(args):
@@ -337,6 +345,29 @@ def process_args(args):
                         
                         choosen=new_choosen
                 
+
+                if (source=='hin' or source=='kan') and target=='eng':
+                    new_choosen = resolveHindi(choosen,exclusions)
+
+
+                    if new_choosen != choosen:
+                    
+                        exclusions.remove(new_choosen)
+                        exclusions.append(choosen)
+
+                        if choosen in new_duplicates:
+                            new_duplicates[new_choosen] = new_duplicates.pop(choosen)
+                        
+                        
+
+                        if new_choosen not in json["text"]:
+                            json["text"]=json["text"].replace(choosen,new_choosen)
+
+                            new_last_line = document_translitted.strip().split(u"\n")[-1].replace(choosen,new_choosen)
+                            document_translitted = u'\n'.join(document_translitted.split(u"\n")[0:-2]) + "\n" + new_last_line + "\n"
+                        
+                        choosen=new_choosen
+
 
                 r = re.compile(my_regex(choosen), flags=re.I | re.X | re.UNICODE)
                 # calculate length of this choosen token
