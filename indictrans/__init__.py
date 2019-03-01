@@ -183,7 +183,7 @@ def process_args(args):
             
             tline = trn.convert(line)
 
-            if u"whatsapp" in tline and args.target=='eng':
+            if u"whatsapp" in tline and args.target=='eng' and u"whatsapp" not in line :
                 tline = tline.replace("whatsapp", "vhaatsapp")
 
             ofp.write(tline)
@@ -380,14 +380,15 @@ def process_args(args):
                         choosen=new_choosen
 
                 if target=='eng':
-                    if choosen == "whatsapp":
+                    if choosen == "whatsapp" and t != "whatsapp":
                         definitive=definitive.replace("whatsapp","vhaatsapp")
                         choosen = "vhaatsapp"
                         new_last_line = document_translitted.strip().split(u"\n")[-1].replace("whatsapp","vhaatsapp")
                         document_translitted = u'\n'.join(document_translitted.split(u"\n")[0:-2]) + "\n" + new_last_line + "\n"
                         exclusions.append("whatsapp")
                         
-                        
+                    if choosen == t :
+                        exclusions=[]
                     
                 json["text"] = definitive
 
