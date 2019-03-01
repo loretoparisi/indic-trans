@@ -177,7 +177,15 @@ def process_args(args):
 
         # transliterate text
         for line in ifp:
+
+            if u"\u0950" in line and args.source=='hin' and args.target=='eng':
+                line = line.replace(u"\u0950", "om")
+            
             tline = trn.convert(line)
+
+            if u"whatsapp" in tline and args.target=='eng':
+                tline = tline.replace("whatsapp", "vhaatsapp")
+
             ofp.write(tline)
 
         # close files
@@ -230,8 +238,11 @@ def process_args(args):
 
         # for every line
         for l in lines:
-
             
+            # Treat special cases
+            if u"\u0950" in l and source=='hin' and target=='eng':
+                l = l.replace(u"\u0950", "om")
+
             # prepare a json for every line
             json = {}
             
@@ -249,9 +260,9 @@ def process_args(args):
 
             
             # text field is sentence first choice without alternatives (stdout mode)
-            json["text"] = definitive
-            #json["tokenization"] = back_tokens
 
+
+            #json["tokenization"] = back_tokens
 
             json["tokens"] = []
 
@@ -368,8 +379,21 @@ def process_args(args):
                         
                         choosen=new_choosen
 
+                if target=='eng':
+                    if choosen == "whatsapp":
+                        definitive=definitive.replace("whatsapp","vhaatsapp")
+                        choosen = "vhaatsapp"
+                        new_last_line = document_translitted.strip().split(u"\n")[-1].replace("whatsapp","vhaatsapp")
+                        document_translitted = u'\n'.join(document_translitted.split(u"\n")[0:-2]) + "\n" + new_last_line + "\n"
+                        exclusions.append("whatsapp")
+                        
+                        
+                    
+                json["text"] = definitive
+
 
                 r = re.compile(my_regex(choosen), flags=re.I | re.X | re.UNICODE)
+                
                 # calculate length of this choosen token
                 length=len([1 for c in choosen if not c in UNICODE_NSM_ALL])
             
