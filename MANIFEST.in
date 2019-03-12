@@ -1,0 +1,2 @@
+recursive-include indictrans/models *.npy *.vec
+recursive-include indictrans/polyglot_tokenizer/data *

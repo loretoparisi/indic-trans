@@ -2,7 +2,7 @@
 
 import os
 
-from setuptools import setup
+from setuptools import setup,find_packages
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 
@@ -49,5 +49,7 @@ extensions = [
 setup(
     setup_requires=['pbr'],
     pbr=True,
+    packages=find_packages(),
+    include_package_data=True,
     ext_modules=cythonize(extensions)
 )

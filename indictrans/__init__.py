@@ -178,8 +178,10 @@ def process_args(args):
         # transliterate text
         for line in ifp:
 
-            if u"\u0950" in line and args.source=='hin' and args.target=='eng':
-                line = line.replace(u"\u0950", "om")
+            if args.source=='hin' and args.target=='eng':
+                replacements = {  u"\u0950": "om", u"\u0915\u092e\u0932": "kamal" }
+                for script,roman in replacements.iteritems():
+                    line = line.replace(script, roman)
             
             tline = trn.convert(line)
 
@@ -191,10 +193,8 @@ def process_args(args):
         # close files
         ifp.close()
         ofp.close()
-        
 
-
-    if args.output_format=='json':
+    elif args.output_format=='json':
         
         # getting source language from terminal
         source=args.source 
@@ -434,6 +434,16 @@ def process_args(args):
         
         r = js.dumps(final_output)
         ofp.write(r)
+
+        # close files
+        ifp.close()
+        ofp.close()
+
+    else:
+
+        # close files
+        ifp.close()
+        ofp.close()
 
 
 def main():
